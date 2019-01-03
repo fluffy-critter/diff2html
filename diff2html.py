@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 # coding=utf-8
 #
 # This program is free software; you can redistribute it and/or modify
@@ -34,12 +34,20 @@
 #   Detect if the character is "printable" for whatever definition,
 #   and display those directly.
 
-import sys, re, htmlentitydefs, getopt, StringIO, codecs, datetime
+import sys
+import re
+import htmlentitydefs
+import getopt
+import StringIO
+import codecs
+import datetime
 try:
     from simplediff import diff, string_diff
 except ImportError:
-    sys.stderr.write("info: simplediff module not found, only linediff is available\n")
-    sys.stderr.write("info: it can be downloaded at https://github.com/paulgb/simplediff\n")
+    sys.stderr.write(
+        "info: simplediff module not found, only linediff is available\n")
+    sys.stderr.write(
+        "info: it can be downloaded at https://github.com/paulgb/simplediff\n")
 
 # minimum line size, we add a zero-sized breakable space every
 # LINESIZE characters
@@ -52,7 +60,7 @@ algorithm = 0
 
 desc = "File comparison"
 dtnow = datetime.datetime.now()
-modified_date = "%s+01:00"%dtnow.isoformat()
+modified_date = "%s+01:00" % dtnow.isoformat()
 
 html_hdr = """<!DOCTYPE html>
 <html lang="{5}" dir="ltr"
@@ -113,6 +121,7 @@ hunk_off1, hunk_size1, hunk_off2, hunk_size2 = 0, 0, 0, 0
 # Characters we're willing to word wrap on
 WORDBREAK = " \t;.,/):-"
 
+
 def sane(x):
     r = ""
     for i in x:
@@ -123,34 +132,34 @@ def sane(x):
             r = r + i
     return r
 
+
 def linediff(s, t):
     '''
     Original line diff algorithm of diff2html. It's character based.
     '''
     if len(s):
-        s = unicode(reduce(lambda x, y:x+y, [ sane(c) for c in s ]))
+        s = unicode(reduce(lambda x, y: x + y, [sane(c) for c in s]))
     if len(t):
-        t = unicode(reduce(lambda x, y:x+y, [ sane(c) for c in t ]))
+        t = unicode(reduce(lambda x, y: x + y, [sane(c) for c in t]))
 
     m, n = len(s), len(t)
-    d = [[(0, 0) for i in range(n+1)] for i in range(m+1)]
-
+    d = [[(0, 0) for i in range(n + 1)] for i in range(m + 1)]
 
     d[0][0] = (0, (0, 0))
-    for i in range(m+1)[1:]:
-        d[i][0] = (i,(i-1, 0))
-    for j in range(n+1)[1:]:
-        d[0][j] = (j,(0, j-1))
+    for i in range(m + 1)[1:]:
+        d[i][0] = (i, (i - 1, 0))
+    for j in range(n + 1)[1:]:
+        d[0][j] = (j, (0, j - 1))
 
-    for i in range(m+1)[1:]:
-        for j in range(n+1)[1:]:
-            if s[i-1] == t[j-1]:
+    for i in range(m + 1)[1:]:
+        for j in range(n + 1)[1:]:
+            if s[i - 1] == t[j - 1]:
                 cost = 0
             else:
                 cost = 1
-            d[i][j] = min((d[i-1][j][0] + 1, (i-1, j)),
-                          (d[i][j-1][0] + 1, (i, j-1)),
-                          (d[i-1][j-1][0] + cost, (i-1, j-1)))
+            d[i][j] = min((d[i - 1][j][0] + 1, (i - 1, j)),
+                          (d[i][j - 1][0] + 1, (i, j - 1)),
+                          (d[i - 1][j - 1][0] + cost, (i - 1, j - 1)))
 
     l = []
     coord = (m, n)
@@ -170,7 +179,7 @@ def linediff(s, t):
         fx, fy = father_coord
         father_val = d[fx][fy][0]
 
-        diff = (cx-fx, cy-fy)
+        diff = (cx - fx, cy - fy)
 
         if diff == (0, 1):
             l1.append("")
@@ -178,14 +187,14 @@ def linediff(s, t):
         elif diff == (1, 0):
             l1.append(DIFFON + s[fx] + DIFFOFF)
             l2.append("")
-        elif child_val-father_val == 1:
+        elif child_val - father_val == 1:
             l1.append(DIFFON + s[fx] + DIFFOFF)
             l2.append(DIFFON + t[fy] + DIFFOFF)
         else:
             l1.append(s[fx])
             l2.append(t[fy])
 
-    r1, r2 = (reduce(lambda x, y:x+y, l1), reduce(lambda x, y:x+y, l2))
+    r1, r2 = (reduce(lambda x, y: x + y, l1), reduce(lambda x, y: x + y, l2))
     return r1, r2
 
 
@@ -220,7 +229,7 @@ def word_diff(old, new):
         on whitespace (a list of change instructions; see the docstring
         of `diff`)
     '''
-    separator_pattern = '(\W+)';
+    separator_pattern = '(\W+)'
     return diff(re.split(separator_pattern, old, flags=re.UNICODE), re.split(separator_pattern, new, flags=re.UNICODE))
 
 
@@ -262,10 +271,10 @@ def convert(s, linesize=0, ponct=0):
 
         # special highlighted chars
         elif c == "\t" and ponct == 1:
-            n = tabsize-(i%tabsize)
+            n = tabsize - (i % tabsize)
             if n == 0:
                 n = tabsize
-            t += (u'<span class="diffponct">&raquo;</span>'+'&nbsp;'*(n-1))
+            t += (u'<span class="diffponct">&raquo;</span>' + '&nbsp;' * (n - 1))
         elif c == " " and ponct == 1:
             t += u'<span class="diffponct">&middot;</span>'
         elif c == "\n" and ponct == 1:
@@ -286,21 +295,27 @@ def convert(s, linesize=0, ponct=0):
 
 
 def add_comment(s, output_file):
-    output_file.write(('<tr class="diffmisc"><td colspan="4">%s</td></tr>\n'%convert(s)).encode(encoding))
+    output_file.write(
+        ('<tr class="diffmisc"><td colspan="4">%s</td></tr>\n' % convert(s)).encode(encoding))
 
 
 def add_filename(f1, f2, output_file):
-    output_file.write(("<tr><th colspan='2'>%s</th>"%convert(f1, linesize=linesize)).encode(encoding))
-    output_file.write(("<th colspan='2'>%s</th></tr>\n"%convert(f2, linesize=linesize)).encode(encoding))
+    output_file.write(("<tr><th colspan='2'>%s</th>" %
+                       convert(f1, linesize=linesize)).encode(encoding))
+    output_file.write(("<th colspan='2'>%s</th></tr>\n" %
+                       convert(f2, linesize=linesize)).encode(encoding))
 
 
 def add_hunk(output_file, show_hunk_infos):
     if show_hunk_infos:
-        output_file.write('<tr class="diffhunk"><td colspan="2">Offset %d, %d lines modified</td>'%(hunk_off1, hunk_size1))
-        output_file.write('<td colspan="2">Offset %d, %d lines modified</td></tr>\n'%(hunk_off2, hunk_size2))
+        output_file.write(
+            '<tr class="diffhunk"><td colspan="2">Offset %d, %d lines modified</td>' % (hunk_off1, hunk_size1))
+        output_file.write(
+            '<td colspan="2">Offset %d, %d lines modified</td></tr>\n' % (hunk_off2, hunk_size2))
     else:
         # &#8942; - vertical ellipsis
-        output_file.write('<tr class="diffhunk"><td colspan="2">&#8942;</td><td colspan="2">&#8942;</td></tr>')
+        output_file.write(
+            '<tr class="diffhunk"><td colspan="2">&#8942;</td><td colspan="2">&#8942;</td></tr>')
 
 
 def add_line(s1, s2, output_file):
@@ -324,23 +339,27 @@ def add_line(s1, s2, output_file):
             s1, s2 = diff_changed_words_ts(orig1, orig2)
         elif algorithm == 2:
             s1, s2 = diff_changed_ts(orig1, orig2)
-        else: # default
+        else:  # default
             s1, s2 = linediff(orig1, orig2)
 
     output_file.write(('<tr class="diff%s">' % type_name).encode(encoding))
     if s1 != None and s1 != "":
-        output_file.write(('<td class="diffline">%d </td>' % line1).encode(encoding))
+        output_file.write(('<td class="diffline">%d </td>' %
+                           line1).encode(encoding))
         output_file.write('<td class="diffpresent">'.encode(encoding))
-        output_file.write(convert(s1, linesize=linesize, ponct=1).encode(encoding))
+        output_file.write(
+            convert(s1, linesize=linesize, ponct=1).encode(encoding))
         output_file.write('</td>')
     else:
         s1 = ""
         output_file.write('<td colspan="2"> </td>')
 
     if s2 != None and s2 != "":
-        output_file.write(('<td class="diffline">%d </td>'%line2).encode(encoding))
+        output_file.write(('<td class="diffline">%d </td>' %
+                           line2).encode(encoding))
         output_file.write('<td class="diffpresent">')
-        output_file.write(convert(s2, linesize=linesize, ponct=1).encode(encoding))
+        output_file.write(
+            convert(s2, linesize=linesize, ponct=1).encode(encoding))
         output_file.write('</td>')
     else:
         s2 = ""
@@ -391,7 +410,8 @@ def parse_input(input_file, output_file, input_file_name, output_file_name,
 
     if not exclude_headers:
         title_suffix = ' ' + input_file_name
-        output_file.write(html_hdr.format(title_suffix, encoding, desc, "", modified_date, lang).encode(encoding))
+        output_file.write(html_hdr.format(
+            title_suffix, encoding, desc, "", modified_date, lang).encode(encoding))
     output_file.write(table_hdr.encode(encoding))
 
     while True:
@@ -416,7 +436,7 @@ def parse_input(input_file, output_file, input_file_name, output_file_name,
         m = re.match("@@ -(\d+),?(\d*) \+(\d+),?(\d*)", l)
         if m:
             empty_buffer(output_file)
-            hunk_data = map(lambda x:x=="" and 1 or int(x), m.groups())
+            hunk_data = map(lambda x: x == "" and 1 or int(x), m.groups())
             hunk_off1, hunk_size1, hunk_off2, hunk_size2 = hunk_data
             line1, line2 = hunk_off1, hunk_off2
             add_hunk(output_file, show_hunk_infos)
@@ -452,7 +472,8 @@ def parse_input(input_file, output_file, input_file_name, output_file_name,
     empty_buffer(output_file)
     output_file.write(table_footer.encode(encoding))
     if not exclude_headers:
-        output_file.write(html_footer.format("", dtnow.strftime("%d.%m.%Y")).encode(encoding))
+        output_file.write(html_footer.format(
+            "", dtnow.strftime("%d.%m.%Y")).encode(encoding))
 
 
 def usage():
@@ -476,6 +497,7 @@ stdout may not work with UTF-8, instead use -o option.
    -h          show help and exit
 '''
 
+
 def main():
     global linesize, tabsize
     global show_CR
@@ -494,7 +516,8 @@ def main():
                                     "exclude-html-headers", "tabsize=",
                                     "linesize=", "show-cr", "show-hunk-infos", "algorithm="])
     except getopt.GetoptError, err:
-        print unicode(err) # will print something like "option -a not recognized"
+        # will print something like "option -a not recognized"
+        print unicode(err)
         usage()
         sys.exit(2)
     verbose = False
@@ -536,11 +559,13 @@ def main():
     parse_input(input_file, output_file, input_file_name, output_file_name,
                 exclude_headers, show_hunk_infos)
 
+
 def parse_from_memory(txt, exclude_headers, show_hunk_infos):
     " Parses diff from memory and returns a string with html "
     input_stream = StringIO.StringIO(txt)
     output_stream = StringIO.StringIO()
-    parse_input(input_stream, output_stream, '', '', exclude_headers, show_hunk_infos)
+    parse_input(input_stream, output_stream, '', '',
+                exclude_headers, show_hunk_infos)
     return output_stream.getvalue()
 
 
